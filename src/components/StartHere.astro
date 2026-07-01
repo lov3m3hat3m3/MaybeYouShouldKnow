@@ -1,0 +1,39 @@
+---
+import { getCollection } from 'astro:content';
+import ItemCard from './ItemCard.astro';
+
+const allItems = await getCollection('items');
+let beginnerItems = allItems.filter((item) => item.data.forBeginners);
+
+if (beginnerItems.length === 0) {
+  // Fallback: 6 most recent items
+  beginnerItems = allItems
+    .sort((a, b) => b.data.created.getTime() - a.data.created.getTime())
+    .slice(0, 6);
+} else if (beginnerItems.length > 9) {
+  beginnerItems = beginnerItems.slice(0, 9);
+}
+---
+
+<section class="py-12 md:py-16" aria-labelledby="start-here-title">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 id="start-here-title" class="text-2xl md:text-3xl font-bold text-ink">
+        Bắt đầu từ đây
+      </h2>
+      <span class="text-sm text-ink-muted hidden sm:inline">
+        {beginnerItems.length} bài đọc dành cho người mới
+      </span>
+    </div>
+
+    <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
+      {beginnerItems.map((item) => (
+        <ItemCard
+          prompt={item.data.prompt}
+          category={item.data.category}
+          slug={item.data.slug}
+        />
+      ))}
+    </div>
+  </div>
+</section>

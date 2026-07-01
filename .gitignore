@@ -1,0 +1,35 @@
+# build output
+dist/
+# generated types
+.astro/
+
+# dependencies
+node_modules/
+
+# logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+
+
+# environment variables
+.env
+.env.production
+
+# macOS-specific files
+.DS_Store
+
+# jetbrains setting folder
+.idea/
+
+# TinaCMS — generated on each `tinacms build`/`tinacms dev`.
+# Note: tina/tina-lock.json IS committed (required by Tina Cloud).
+tina/__generated__/
+
+# Vercel — project link + local build output.
+.vercel/
+
+.vercel
+.env*.local
+.env*

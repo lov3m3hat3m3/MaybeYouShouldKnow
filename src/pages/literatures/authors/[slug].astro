@@ -1,0 +1,125 @@
+---
+// src/pages/literature/authors/[slug].astro
+import { getCollection } from 'astro:content';
+import Layout from '../../../layouts/Layout.astro';
+import { slugify } from '../../../lib/utils';
+import 'flag-icons/css/flag-icons.min.css';
+
+export async function getStaticPaths() {
+  const allBooks = await getCollection('literatures');
+
+  // 1. Pre-resolve authors for all books once to keep processing linear
+  const booksWithResolvedAuthors = allBooks.map(book => {
+    let authorsList: string[] = [];
+    if (book.data.author && Array.isArray(book.data.author)) {
+      authorsList = book.data.author.flatMap((authName: string) => {
+        if (authName === 'Khác') {
+          if (!book.data.authorOther) return ['Tác giả khác'];
+          return book.data.authorOther.split(',').map((n: string) => n.trim());
+        }
+        return authName;
+      });
+    }
+    return {
+      ...book,
+      resolvedAuthors: authorsList
+    };
+  });
+
+  // 2. Build a unique map of authors using the pre-resolved data
+  const authorMap = new Map<string, string>();
+  booksWithResolvedAuthors.forEach((book) => {
+    book.resolvedAuthors.forEach((name) => {
+      const slug = slugify(name);
+      if (slug) authorMap.set(slug, name);
+    });
+  });
+
+  // 3. Generate routes quickly using the pre-calculated arrays
+  return Array.from(authorMap.entries()).map(([slug, authorName]) => {
+    const filteredBooks = booksWithResolvedAuthors.filter((book) => 
+      book.resolvedAuthors.includes(authorName)
+    );
+    const sortedBooks = filteredBooks.sort((a, b) => a.data.publishedYear - b.data.publishedYear);
+
+    return {
+      params: { slug },
+      props: { authorName, books: sortedBooks },
+    };
+  });
+}
+
+const { authorName, books } = Astro.props;
+---
+
+<Layout title={`Tác giả: ${authorName} - Hiểu Đúng`} description={`Tất cả tác phẩm thuộc tác giả ${authorName}`}>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+    
+    <header class="mb-10 pb-5 border-b border-border">
+      <div class="text-sm font-semibold text-brand-600 uppercase tracking-wide mb-2">Tác giả</div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-ink leading-tight">
+        {authorName}
+      </h1>
+      <p class="text-sm text-ink-muted mt-2">
+        Hiện có {books.length} tác phẩm thuộc tác giả này.
+      </p>
+    </header>
+
+    {books.length === 0 ? (
+      <div class="text-center py-12 text-ink-muted">
+        Hiện chưa có tác phẩm nào thuộc tác giả này.
+      </div>
+    ) : (
+      <div class="relative border-l border-border ml-4 md:ml-6 space-y-8">
+        {books.map((book) => {
+          const isEnglish = book.data.dirname === 'en';
+          
+          return (
+            <div class="relative pl-6 md:pl-8 group flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+              <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-border" />
+              
+              <span class="text-sm font-mono font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded min-w-[50px] text-center">
+                {book.data.publishedYear}
+              </span>
+              
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class={`text-base fi fi-${isEnglish ? 'gb' : 'vn'}`}></span>
+                
+                <a href={`/literatures/${book.data.slug}`} class="text-lg font-bold text-ink hover:text-brand-600 transition-colors duration-150">
+                  {book.data.title}
+                </a>
+                {/* Author Attribution */}
+                <span class="text-sm text-ink-muted">
+                  — {(() => {
+                    // 1. Expand the list if 'Khác' is selected and custom names exist
+                    const resolvedAuthors = book.data.author.flatMap((authName: string) => {
+                      if (authName === 'Khác') {
+                        if (!book.data.authorOther) return ['Tác giả khác'];
+                        return book.data.authorOther.split(',').map((n: string) => n.trim());
+                      }
+                      return authName;
+                    });
+
+                    // 2. Map directly over the actual string values
+                    return resolvedAuthors.map((displayName: string, index: number) => (
+                      <>
+                        <a 
+                          href={`/literatures/authors/${slugify(displayName)}`} 
+                          class="hover:text-brand-600 hover:underline inline font-medium text-ink"
+                        >
+                          {displayName}
+                        </a>
+                        {index < resolvedAuthors.length - 1 && ", "}
+                      </>
+                    ));
+                  })()}
+                </span>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+    
+  </main>
+</Layout>

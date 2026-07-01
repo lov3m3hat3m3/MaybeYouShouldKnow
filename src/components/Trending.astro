@@ -1,0 +1,92 @@
+---
+import { getCollection } from 'astro:content';
+import ItemCard from './ItemCard.astro';
+
+const allItems = await getCollection('items');
+const MAX_VISIBLE = 5;
+---
+
+<section class="py-12 md:py-16 bg-white" aria-labelledby="trending-title">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+    <div class="flex items-center justify-between mb-6">
+      <h2 id="trending-title" class="text-2xl md:text-3xl font-bold text-ink">
+        Thẻ hot tuần này 🔥
+      </h2>
+      <a href="#" class="text-sm font-semibold text-brand-600 hover:text-brand-800 transition-colors">
+        Xem tất cả →
+      </a>
+    </div>
+
+    <p
+      id="trending-empty"
+      class="text-sm text-ink-muted text-center py-12 border border-dashed border-border rounded-xl"
+    >
+      Chưa có bài hot tuần này. Hãy là người đầu tiên chia sẻ!
+    </p>
+
+    <div
+      id="trending-grid"
+      class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5"
+      data-trending-grid
+      style="display: none"
+    >
+      {allItems.map((item) => (
+        <ItemCard
+          prompt={item.data.prompt}
+          category={item.data.category}
+          slug={item.data.slug}
+          shareCount={0}
+        />
+      ))}
+    </div>
+  </div>
+</section>
+
+<script is:inline define:vars={{ MAX_VISIBLE }}>
+  (() => {
+    const grid = document.getElementById('trending-grid');
+    const empty = document.getElementById('trending-empty');
+    if (!grid || !empty) return;
+
+    fetch('/api/trending', { headers: { accept: 'application/json' } })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((payload) => {
+        const items = payload && Array.isArray(payload.items) ? payload.items : [];
+        const liveBySlug = new Map(items.map((entry) => [entry.slug, entry.count]));
+
+        const cards = Array.from(grid.querySelectorAll('[data-trending-card]'));
+        const visible = [];
+
+        for (const card of cards) {
+          const slug = card.dataset.slug;
+          const count = slug ? liveBySlug.get(slug) : undefined;
+
+          if (typeof count === 'number' && count > 0) {
+            card.dataset.count = String(count);
+            const countEl = card.querySelector('[data-share-count]');
+            if (countEl) countEl.textContent = count.toLocaleString('vi-VN');
+            const badge = card.querySelector('[data-share-badge]');
+            if (badge instanceof HTMLElement) badge.style.display = '';
+            visible.push({ card, count });
+          } else {
+            card.remove();
+          }
+        }
+
+        if (visible.length === 0) {
+          // Empty state stays; grid stays hidden.
+          return;
+        }
+
+        visible.sort((a, b) => b.count - a.count);
+        visible.slice(MAX_VISIBLE).forEach(({ card }) => card.remove());
+        visible.slice(0, MAX_VISIBLE).forEach(({ card }) => grid.appendChild(card));
+
+        empty.style.display = 'none';
+        grid.style.display = '';
+      })
+      .catch(() => {
+        // Network error: leave the empty state visible.
+      });
+  })();
+</script>

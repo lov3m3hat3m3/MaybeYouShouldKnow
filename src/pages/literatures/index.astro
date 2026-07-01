@@ -1,0 +1,122 @@
+---
+// src/pages/literature/index.astro
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import { slugify } from '../../lib/utils';
+
+// 1. Fetch absolutely all literature entries across both language subfolders
+const allEntries = await getCollection('literatures');
+
+// 2. Filter out duplicate multi-chapter books, keeping only Chapter 1 for the timeline link
+const uniqueBooksMap = new Map();
+
+allEntries.forEach((entry) => {
+  // Group entries by language and bookId to prevent cross-language merging
+  const key = `${entry.data.dirname}_${entry.data.bookId}`;
+  
+  if (entry.data.hasChapters) {
+    // For multi-chapter books, only save or overwrite if this entry is Chapter 1
+    if (entry.data.chapterNumber === 1 || !uniqueBooksMap.has(key)) {
+      uniqueBooksMap.set(key, entry);
+    }
+  } else {
+    // Single-chapter books are always unique
+    uniqueBooksMap.set(key, entry);
+  }
+});
+
+// 3. Convert back to an array and sort chronologically by publication year
+const sortedBooks = Array.from(uniqueBooksMap.values()).sort(
+  (a, b) => a.data.publishedYear - b.data.publishedYear
+);
+---
+
+<Layout 
+  title="Tác phẩm Kinh điển - Hiểu Đúng" 
+  description="Dòng thời gian các tác phẩm kinh điển lý luận chính trị xã hội"
+>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+    
+    {/* Page Header Area */}
+    <header class="mb-10 pb-5 border-b border-border">
+      <div class="text-sm font-semibold text-brand-600 uppercase tracking-wide mb-2">Tư liệu</div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-ink leading-tight">
+        Tác phẩm Kinh điển
+      </h1>
+      <p class="text-sm text-ink-muted mt-2">
+        Hiện có {sortedBooks.length} tác phẩm trong hệ thống tư liệu lịch sử.
+      </p>
+    </header>
+
+    {/* Timeline Content Block */}
+    {sortedBooks.length === 0 ? (
+      <div class="text-center py-12 text-ink-muted">
+        Hiện chưa có tác phẩm nào được cập nhật.
+      </div>
+    ) : (
+      <div class="relative border-l border-border ml-4 md:ml-6 space-y-8">
+        {sortedBooks.map((book) => {
+          const isEnglish = book.data.dirname === 'en';
+          
+          return (
+            <div class="relative pl-6 md:pl-8 group">
+              {/* Timeline dot marker node */}
+              <div class="absolute -left-[5px] top-1.5 w-2.5 h-2.5 rounded-full bg-border group-hover:bg-brand-600 transition-colors duration-200" />
+              
+              <div class="flex flex-col sm:flex-row sm:items-baseline gap-1 sm:gap-4">
+                {/* Year Badge */}
+                <span class="text-sm font-mono font-bold text-brand-600 bg-brand-50 px-2 py-0.5 rounded min-w-[50px] text-center">
+                  {book.data.publishedYear}
+                </span>
+                
+                {/* Book Link and Meta Content */}
+                <div class="flex items-center gap-2 flex-wrap">
+                  {/* Language Flag Badge */}
+                  <span 
+                    class={`text-base select-none fi fi-${isEnglish ? 'gb' : 'vn'}`} 
+                    title={isEnglish ? "English edition" : "Bản tiếng Việt"}
+                  >
+                  </span>
+                  
+                  {/* Title Link pointing directly to the root bookId path */}
+                  <a 
+                    href={`/literatures/${book.data.bookId}`}
+                    class="text-lg font-bold text-ink hover:text-brand-600 transition-colors duration-150 decoration-brand-600"
+                  >
+                    {book.data.title}
+                  </a>
+                  
+                  {/* Author Attribution */}
+                  <span class="text-sm text-ink-muted">
+                    — {(() => {
+                      const resolvedAuthors = book.data.author.flatMap((authName: string) => {
+                        if (authName === 'Khác') {
+                          if (!book.data.authorOther) return ['Tác giả khác'];
+                          return book.data.authorOther.split(',').map((n: string) => n.trim());
+                        }
+                        return authName;
+                      });
+
+                      return resolvedAuthors.map((displayName: string, index: number) => (
+                        <Fragment key={displayName}>
+                          <a 
+                            href={`/literatures/authors/${slugify(displayName)}`} 
+                            class="hover:text-brand-600 hover:underline inline font-medium text-ink"
+                          >
+                            {displayName}
+                          </a>
+                          {index < resolvedAuthors.length - 1 && ", "}
+                        </Fragment>
+                      ));
+                    })()}
+                  </span>
+                </div>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    )}
+    
+  </main>
+</Layout>

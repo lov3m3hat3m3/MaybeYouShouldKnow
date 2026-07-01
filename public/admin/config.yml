@@ -1,0 +1,120 @@
+local_backend: true
+
+backend:
+  name: github
+  repo: lov3m3hat3m3/MaybeYouShouldKnow # Update with your real GitHub repo
+  branch: main
+  base_url: https://sveltia-cms-auth.aizoaizoaizo.workers.dev
+
+media_libraries:
+  cloudinary:
+    config:
+      cloud_name: "dsoujhal8"
+      api_key: "594195994499677"
+      output_filename_only: false
+
+collections:
+  - name: "items"
+    label: "Items"
+    folder: "/src/content/items"
+    extension: "md"
+    format: "frontmatter"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Slug", name: "slug", widget: "string", required: true, hint: "URL slug (kebab-case, ASCII). Also used as the file name." }
+      - { label: "Prompt (question / title)", name: "prompt", widget: "text", required: true }
+      - { label: "Answer (body)", name: "body", widget: "markdown" }
+      - label: "Category"
+        name: "category"
+        widget: "select"
+        required: true
+        options:
+          - "Quyền cơ bản"
+          - "LGBTQIA+"
+          - "Nữ quyền"
+          - "Đa dạng sắc tộc"
+      - { label: "Tags", name: "tags", widget: "list", required: false }
+      - { label: "For beginners", name: "forBeginners", widget: "boolean", default: false, hint: "Surface this item in the 'Bắt đầu từ đây' section." }
+      - { label: "Related item slugs", name: "related", widget: "list", required: false, hint: "Slugs of related items (e.g. 'lgbtqia-la-gi'). One per entry." }
+      - { label: "Created", name: "created", widget: "datetime", required: true }
+      - { label: "Updated", name: "updated", widget: "datetime", required: true }
+  
+  - name: "literatures"
+    label: "Tác phẩm Kinh điển"
+    folder: "/src/content/literatures" # Dedicated folder for the markdown files
+    nested: { depth: 2 }
+    extension: "md"
+    format: "frontmatter"
+    summary: "{{title}} — {{structure.chapterTitle}}"
+    create: true
+    path: "{{dirname}}/{{slug}}"
+    slug: "{{slug}}"
+    fields:
+      - { label: "Ngôn ngữ (Language Folder)", name: "dirname", widget: "select", options: ["vi", "en"], hint: "Chọn 'vi' cho tiếng Việt, 'en' cho tiếng Anh." }
+      - { label: "Slug", name: "slug", widget: "string", required: true, hint: "Slug Id (vd: 'tuyen-ngon-dang-cong-san'). Phải riêng biệt, nếu trùng sẽ xảy ra lỗi. Nếu chọn 'Tác phẩm nhiều chương' ở phần Cấu trúc tác phẩm thì mỗi chương phải có slug riêng." }
+      - { label: "Tên tác phẩm (Title)", name: "title", widget: "string", required: true, hint: "Nếu chọn 'Tác phẩm nhiều chương' ở phần Cấu trúc tác phẩm thì ô này là tên tác phẩm, giữ nguyên. Tên chương sẽ ở bên dưới" }
+      - label: "Cấu trúc tác phẩm"
+        name: "structure"
+        widget: "object"
+        types:
+          - label: "Tác phẩm một chương. Nếu tác phẩm có nhiều chương nhưng ngắn, thì vẫn có thể lựa chọn cái này."
+            name: "single_chapter"
+            fields:
+              - { label: "Trạng thái", name: "hasChapters", widget: "hidden", default: false }
+
+          - label: "Tác phẩm nhiều chương. Mỗi chương sẽ ở một trang riêng"
+            name: "multi_chapter"
+            fields:
+              - { label: "Mã định danh Sách (Book ID)", name: "bookId", widget: "string", hint: "Dùng chung mã này cho tất cả các chương. Ví dụ: tuyen-ngon-dang-cong-san", required: true }
+              - { label: "Chương này là chương mấy. Lưu ý thứ tự các chương của tác phẩm này ở các file khác để tránh bị trùng", name: "chapterNumber", widget: "number", value_type: "int", default: 1, required: true }
+              - { label: "Tiêu đề chương/phần", name: "chapterTitle", widget: "string", required: false }
+      - { label: "Tác giả (Author)", name: "author", widget: "select", required: true, multiple: true, interface: checkbox, options: ["Karl Marx","Friedrich Engels","V.I. Lenin","Hồ Chí Minh","Rosa Luxemburg","Leon Trotsky","Antonio Gramsci","Mikhail Bakunin","Peter Kropotkin","Pierre-Joseph Proudhon","Emma Goldman","Khác"] }
+      - { label: "Tên tác giả khác", name: "authorOther", widget: "string", required: false, hint: "Chỉ nhập nếu chọn 'Khác' ở trên. Có thể nhập nhiều tác giả, tách ra bằng dấu phẩy ','" }
+      - { label: "Năm xuất bản gốc (Original Year)", name: "publishedYear", widget: "number", required: true, hint: "Ví dụ: 1848" }
+      - { label: "Nội dung tác phẩm / Trích đoạn", name: "body", widget: "markdown" }
+      - { label: "Thông tin bản dịch (Translation Info)", name: "translator", widget: "string", required: false, hint: "Ví dụ: Nhà xuất bản Sự thật, 1986" }
+      - { label: "Tags", name: "tags", widget: "list", required: false }
+      - { label: "Created", name: "created", widget: "datetime", required: true }
+      - { label: "Updated", name: "updated", widget: "datetime", required: true }
+
+  - name: "events"
+    label: "Sự kiện Lịch sử"
+    folder: "/src/content/events"
+    extension: "md"
+    format: "frontmatter"
+    create: true
+    slug: "{{slug}}"
+    fields:
+      - { label: "Slug", name: "slug", widget: "string", required: true }
+      - { label: "Tên sự kiện (Title)", name: "title", widget: "string", required: true }
+      - { label: "Năm diễn ra (Year for sorting)", name: "year", widget: "number", required: true, hint: "Ví dụ: 1886" }
+      - { label: "Ngày hiển thị (Display Date)", name: "displayDate", widget: "string", required: true, hint: "Ví dụ: 'Tháng 05, 1886' hoặc 'Ngày 18 đến 22 tháng 3, 1871'" }
+      - label: "Quốc gia"
+        name: "country"
+        widget: "select"
+        required: true
+        options:
+          - { label: "Mỹ", value: "us" }
+          - { label: "Pháp", value: "fr" }
+          - { label: "Nga / Liên Xô", value: "ru" }
+          - { label: "Anh", value: "gb" }
+          - { label: "Đức", value: "de" }
+          - { label: "Việt Nam", value: "vn" }
+          - { label: "Trung Quốc", value: "cn" }
+          - { label: "Cuba", value: "cu" }
+          - { label: "Triều Tiên", value: "kp" }
+          - { label: "Lào", value: "la" }
+          - { label: "Nam Tư (Yugoslavia)", value: "rs" }
+          - { label: "Palestine", value: "ps" }
+          - { label: "Ý (Italy)", value: "it" }
+          - { label: "Tây Ban Nha", value: "es" }
+          - { label: "Nam Phi", value: "za" }
+          - { label: "Ấn Độ", value: "in" }
+          - { label: "Quốc tế / Khác", value: "un" }
+      - { label: "Địa điểm (Location)", name: "location", widget: "string", required: true, hint: "Ví dụ: 'Chicago, Mỹ' hoặc 'Paris, Pháp'" }
+      - { label: "Mô tả ngắn (Card Summary)", name: "summary", widget: "string", required: true, hint: "Một câu tóm tắt ngắn hiển thị ngay trên dòng thời gian." }
+      - { label: "Nội dung chi tiết / Tư liệu", name: "body", widget: "markdown", required: true }
+      - { label: "Tags", name: "tags", widget: "list", required: false }
+      - { label: "Created", name: "created", widget: "datetime", required: true }
+      - { label: "Updated", name: "updated", widget: "datetime", required: true }

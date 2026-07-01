@@ -1,0 +1,76 @@
+---
+// src/pages/timeline/[slug].astro
+import { getCollection, render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'js-yaml';
+import 'flag-icons/css/flag-icons.min.css';
+
+export async function getStaticPaths() {
+  const allEvents = await getCollection('events');
+  return allEvents.map((event) => ({
+    params: { slug: event.data.slug },
+    props: { event },
+  }));
+}
+
+const { event } = Astro.props;
+const { Content } = await render(event);
+
+// Cross-reference country options list labels from config.yml
+const configPath = path.resolve('./public/admin/config.yml');
+const configFile = fs.readFileSync(configPath, 'utf8');
+const config = yaml.load(configFile) as any;
+
+const eventsCollection = config.collections.find((c: any) => c.name === 'events');
+const countryField = eventsCollection?.fields.find((f: any) => f.name === 'country');
+const countryOptions: { label: string; value: string }[] = countryField?.options || [];
+const countryLabel = countryOptions.find((opt) => opt.value === event.data.country)?.label || event.data.country;
+---
+
+<Layout 
+  title={`${event.data.title} - Dòng thời gian Lịch sử`} 
+  description={event.data.summary}
+>
+  <main class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+    
+    <article class="prose max-w-none">
+      <header class="mb-8 pb-6 border-b border-border">
+        
+        {/* Date line banner text wrapper */}
+        <div class="text-sm font-mono font-bold text-brand-600 mb-2">
+          {event.data.displayDate}
+        </div>
+
+        <h1 class="text-3xl sm:text-4xl font-extrabold text-ink leading-tight mb-4">
+          {event.data.title}
+        </h1>
+        
+        {/* Location metadata display line block */}
+        <div class="text-sm font-medium text-ink-muted flex items-center gap-2 flex-wrap mb-4">
+          <span class={`fi fi-${event.data.country} text-base rounded-sm shadow-sm select-none`}></span>
+          <span>{event.data.location}, {countryLabel}</span>
+        </div>
+
+        {/* Short summary block rendering style */}
+        <p class="text-base text-ink-muted italic border-l-4 border-slate-200 pl-4 my-4 leading-relaxed">
+          {event.data.summary}
+        </p>
+      </header>
+      
+      {/* Complete Markdown Document Render Wrapper Container */}
+      <div class="content text-ink leading-relaxed max-w-none prose-headings:text-ink prose-a:text-brand-600">
+        <Content />
+      </div>
+
+      {/* Back button container panel */}
+      <div class="mt-12 pt-6 border-t border-border">
+        <a href="/events" class="inline-flex items-center text-sm font-semibold text-brand-600 hover:underline">
+          ← Quay lại dòng thời gian
+        </a>
+      </div>
+    </article>
+
+  </main>
+</Layout>

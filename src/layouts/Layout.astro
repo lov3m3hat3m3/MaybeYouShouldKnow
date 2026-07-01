@@ -1,0 +1,77 @@
+---
+import '../styles/global.css';
+import 'flag-icons/css/flag-icons.min.css';
+
+export interface Props {
+  title?: string;
+  description?: string;
+}
+
+const {
+  title = "Hiểu Đúng - Cẩm nang vấn đề xã hội",
+  description = "Cẩm nang giải thích các vấn đề xã hội đương đại bằng ngôn ngữ dễ hiểu - từ nữ quyền, LGBTQIA+ đến bình đẳng và đa dạng."
+} = Astro.props;
+---
+
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content={description} />
+  <meta name="theme-color" content="#ea580c" />
+  <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
+  <title>{title}</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body class="min-h-screen flex flex-col">
+  <header class="sticky top-0 z-40 bg-white/90 backdrop-blur border-b border-border">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div class="flex items-center justify-between h-14">
+        <a href="/" class="flex items-center gap-2 text-brand-700 font-bold text-lg tracking-tight hover:text-brand-800 transition-colors">
+          <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <path d="M15 14c.2-1 .7-1.7 1-2.5a6 6 0 1 0-10.6 0c.3.8.8 1.5 1 2.5"/>
+            <path d="M9 18h6"/>
+            <path d="M10 22h4"/>
+          </svg>
+          <span class="hidden sm:inline">Hiểu Đúng</span>
+        </a>
+        <nav class="flex items-center gap-4" aria-label="Điều hướng chính">
+          <a href="/" class="text-sm font-medium text-ink-muted hover:text-brand-700 transition-colors">
+            Trang chủ
+          </a>
+          <a href="/literatures" class="text-sm font-medium text-ink-muted hover:text-brand-700 transition-colors">
+            Tác phẩm
+          </a>
+          <a href="/events" class="text-sm font-medium text-ink-muted hover:text-brand-700 transition-colors">
+            Lịch sử
+          </a>
+          <a href="#" class="text-sm font-medium text-ink-muted hover:text-brand-700 transition-colors">
+            Giới thiệu
+          </a>
+        </nav>
+      </div>
+    </div>
+  </header>
+
+  <main class="flex-1">
+    <slot />
+  </main>
+
+  <footer class="border-t border-border bg-white">
+    <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <div class="flex flex-col sm:flex-row items-center justify-between gap-4">
+        <p class="text-sm text-ink-muted">
+          © 2026 Hiểu Đúng. Mọi nội dung được chia sẻ với mục đích giáo dục.
+        </p>
+        <div class="flex items-center gap-4">
+          <a href="#" class="text-sm text-ink-muted hover:text-brand-700 transition-colors">Chính sách</a>
+          <a href="#" class="text-sm text-ink-muted hover:text-brand-700 transition-colors">Liên hệ</a>
+        </div>
+      </div>
+    </div>
+  </footer>
+</body>
+</html>

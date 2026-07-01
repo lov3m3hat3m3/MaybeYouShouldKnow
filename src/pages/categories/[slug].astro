@@ -1,0 +1,74 @@
+---
+// src/pages/categories/[slug].astro
+import { getCollection } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import ItemCard from '../../components/ItemCard.astro';
+import { slugify } from '../../lib/utils';
+import fs from 'node:fs';
+import path from 'node:path';
+import yaml from 'js-yaml';
+
+export async function getStaticPaths() {
+  const allItems = await getCollection('items');
+
+  // 1. Parse the config.yml file to get the absolute source of truth
+  const configPath = path.resolve('./public/admin/config.yml');
+  const configFile = fs.readFileSync(configPath, 'utf8');
+  const config = yaml.load(configFile) as any;
+
+  // 2. Extract the options array directly from the items collection field
+  const itemsCollection = config.collections.find((c: any) => c.name === 'items');
+  const categoryField = itemsCollection?.fields.find((f: any) => f.name === 'category');
+  const cmsCategories: string[] = categoryField?.options || [];
+
+  // 3. Generate paths based strictly on what is defined in the CMS config
+  return cmsCategories.map((category) => {
+    const slug = slugify(category);
+    const filteredItems = allItems.filter((item) => item.data.category === category);
+
+    return {
+      params: { slug },
+      props: { 
+        categoryName: category, 
+        items: filteredItems 
+      },
+    };
+  });
+}
+
+const { categoryName, items } = Astro.props;
+---
+<Layout title={`Chủ đề: ${categoryName} - Hiểu Đúng`} description={`Tất cả bài viết thuộc danh mục ${categoryName}`}>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+    
+    {/* Page Header Area */}
+    <header class="mb-10 pb-5 border-b border-border">
+      <div class="text-sm font-semibold text-brand-600 uppercase tracking-wide mb-2">Chủ đề</div>
+      <h1 class="text-3xl sm:text-4xl font-extrabold text-ink leading-tight">
+        {categoryName}
+      </h1>
+      <p class="text-sm text-ink-muted mt-2">
+        Hiện có {items.length} bài viết thuộc danh mục này.
+      </p>
+    </header>
+
+    {/* Articles Grid Listing */}
+    {items.length === 0 ? (
+      <div class="text-center py-12 text-ink-muted">
+        Hiện chưa có bài viết nào trong danh mục này.
+      </div>
+    ) : (
+      <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {items.map((item) => (
+          <ItemCard
+            prompt={item.data.prompt}
+            category={item.data.category}
+            slug={item.data.slug}
+            shareCount={item.data.shareCount}
+          />
+        ))}
+      </div>
+    )}
+    
+  </main>
+</Layout>

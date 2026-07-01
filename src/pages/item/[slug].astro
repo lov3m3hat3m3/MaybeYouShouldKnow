@@ -1,0 +1,82 @@
+---
+import { getCollection, render } from 'astro:content';
+import Layout from '../../layouts/Layout.astro';
+import ShareButton from '../../components/ShareButton.astro';
+import { slugify } from '../../lib/utils';
+
+export async function getStaticPaths() {
+  const items = await getCollection('items');
+  return items.map((item) => ({
+    params: { slug: item.data.slug },
+    props: { item },
+  }));
+}
+
+const { item } = Astro.props;
+const { data } = item;
+const { Content } = await render(item);
+const relatedItems = await getCollection('items');
+const related = relatedItems.filter((r) => data.related.includes(r.data.slug));
+---
+
+<Layout title={`${data.prompt} - Hiểu Đúng`} description={data.prompt}>
+  <article class="max-w-3xl mx-auto px-4 sm:px-6 lg:px-8 py-10 md:py-14">
+    <header class="mb-8">
+      <div class="flex items-center gap-3 mb-4">
+        <a
+          href={`/categories/${slugify(data.category)}`}
+          class="inline-block text-xs font-bold tracking-wide text-brand-700 bg-brand-100 hover:bg-brand-200 px-2.5 py-1 rounded-full uppercase transition-colors cursor-pointer"
+          data-pagefind-filter="category"
+          data-pagefind-meta="category"
+        >
+          {data.category}
+        </a>
+        <time class="text-xs text-ink-muted" datetime={data.created.toISOString()}>
+          {data.created.toLocaleDateString('vi-VN')}
+        </time>
+      </div>
+      <h1
+        class="text-2xl sm:text-3xl md:text-4xl font-extrabold text-ink leading-tight"
+        data-pagefind-meta="prompt"
+      >
+        {data.prompt}
+      </h1>
+    </header>
+
+    <div class="flex items-center gap-3 mb-8">
+      <ShareButton slug={data.slug} />
+    </div>
+
+    <div class="prose prose-lg max-w-none text-lg md:text-xl leading-relaxed text-ink" data-pagefind-body>
+      <Content />
+    </div>
+
+    {data.tags.length > 0 && (
+      <div class="mt-10 pt-6 border-t border-border">
+        <h2 class="text-sm font-semibold text-ink-muted uppercase tracking-wide mb-3">Thẻ</h2>
+        <div class="flex flex-wrap gap-2">
+          {data.tags.map((tag) => (
+            <span class="px-3 py-1 text-sm font-medium bg-surface-muted border border-border rounded-full text-ink-muted">
+              #{tag}
+            </span>
+          ))}
+        </div>
+      </div>
+    )}
+
+    {related.length > 0 && (
+      <div class="mt-10 pt-6 border-t border-border">
+        <h2 class="text-sm font-semibold text-ink-muted uppercase tracking-wide mb-3">Liên quan</h2>
+        <ul class="space-y-2">
+          {related.map((r) => (
+            <li>
+              <a href={`/item/${r.data.slug}`} class="text-brand-600 hover:text-brand-800 font-medium transition-colors">
+                {r.data.prompt}
+              </a>
+            </li>
+          ))}
+        </ul>
+      </div>
+    )}
+  </article>
+</Layout>

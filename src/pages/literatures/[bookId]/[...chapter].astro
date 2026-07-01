@@ -1,0 +1,258 @@
+---
+// src/pages/literatures/[bookId]/[[chapter]].astro
+import { getCollection, render } from 'astro:content';
+import Layout from '../../../layouts/Layout.astro';
+import { slugify } from '../../../lib/utils';
+
+export async function getStaticPaths() {
+  const allEntries = await getCollection('literatures');
+  const paths = [];
+
+  const multiChapterGroups = new Map<string, typeof allEntries>();
+  
+  allEntries.forEach(entry => {
+    if (entry.data.hasChapters) {
+      const key = `${entry.data.dirname}_${entry.data.bookId}`;
+      if (!multiChapterGroups.has(key)) multiChapterGroups.set(key, []);
+      multiChapterGroups.get(key)!.push(entry);
+    } else {
+      // FIX: Force parameter object to completely drop 'chapter' key for single files
+      paths.push({
+        params: { bookId: entry.data.bookId, chapter: undefined },
+        props: { currentChapter: entry, allChapters: [entry] }
+      });
+    }
+  });
+
+  for (const [key, chapters] of multiChapterGroups.entries()) {
+    const sorted = chapters.sort((a, b) => a.data.chapterNumber - b.data.chapterNumber);
+    
+    sorted.forEach((ch) => {
+      const chStr = String(ch.data.chapterNumber);
+      
+      // Path type 1: Explicit chapter URLs (/literatures/tu-ban/2)
+      paths.push({
+        params: { bookId: ch.data.bookId, chapter: chStr },
+        props: { currentChapter: ch, allChapters: sorted }
+      });
+
+      // Path type 2: Default landing URL mapping to Chapter 1 (/literatures/tu-ban)
+      if (ch.data.chapterNumber === 1) {
+        paths.push({
+          params: { bookId: ch.data.bookId, chapter: undefined },
+          props: { currentChapter: ch, allChapters: sorted }
+        });
+      }
+    });
+  }
+
+  return paths;
+}
+const { currentChapter, allChapters } = Astro.props;
+const { Content, headings } = await render(currentChapter);
+
+const { hasChapters, chapterNumber, chapterTitle, title } = currentChapter.data;
+
+// Language check helper from your original file
+const isEnglish = currentChapter.data.dirname === 'en';
+
+// Pagination lookups for multi-chapter layout navigation paths
+const prevChapter = allChapters.find(c => c.data.chapterNumber === chapterNumber - 1);
+const nextChapter = allChapters.find(c => c.data.chapterNumber === chapterNumber + 1);
+
+// Format standard date stamps cleanly (e.g., "06/06/2026")
+const formatDate = (date: Date) => {
+  return new Intl.DateTimeFormat('vi-VN', {
+    day: '2-digit',
+    month: '2-digit',
+    year: 'numeric'
+  }).format(date);
+};
+---
+
+<Layout 
+  title={`${title}${hasChapters ? ` - Chương ${chapterNumber}` : ''} - Hệ thống Tư liệu`} 
+  description={`Đọc tác phẩm kinh điển lý luận: ${title}`}
+>
+  <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-10">
+    
+    {/* Layout structure matches your original sidebar arrangement */}
+    <div class="grid grid-cols-1 lg:grid-cols-4 gap-10">
+      
+      {/* Main Content Pane */}
+      <div class="lg:col-span-3">
+        <article class="prose max-w-none">
+          
+          {/* Combined Design Header Block */}
+          <header class="mb-8 pb-6 border-b border-border">
+            
+            {/* Metadata Badges */}
+            <div class="flex items-center gap-3 text-sm text-ink-muted mb-3 flex-wrap">
+              <span class={`text-base select-none fi fi-${isEnglish ? 'gb' : 'vn'}`} title={isEnglish ? "English edition" : "Bản tiếng Việt"}></span>
+              <span class="font-mono bg-brand-50 text-brand-600 px-2 py-0.5 rounded font-bold">
+                Năm: {currentChapter.data.publishedYear}
+              </span>
+              {currentChapter.data.updated && (
+                <span class="border-l border-border pl-3">
+                  Cập nhật: {formatDate(currentChapter.data.updated)}
+                </span>
+              )}
+            </div>
+
+            {/* Title Block */}
+            <h1 class="text-3xl sm:text-4xl font-extrabold text-ink leading-tight mb-2">
+              {title}
+            </h1>
+            
+            {/* Chapter subtitle display if processing a multi-chapter split document */}
+            {hasChapters && (
+              <h2 class="text-xl text-ink-muted font-medium mb-4">
+                Chương {chapterNumber}: {chapterTitle || 'Không tiêu đề'}
+              </h2>
+            )}
+            
+            {/* Author Listing Array Transform Logic */}
+            <p class="text-base text-ink mb-2">
+              <strong class="text-ink-muted">Tác giả:</strong>{" "}
+              {(() => {
+                const resolvedAuthors = currentChapter.data.author.flatMap((authName: string) => {
+                  if (authName === 'Khác') {
+                    if (!currentChapter.data.authorOther) return ['Tác giả khác'];
+                    return currentChapter.data.authorOther.split(',').map((n: string) => n.trim());
+                  }
+                  return authName;
+                });
+
+                return resolvedAuthors.map((displayName: string, index: number) => (
+                  <Fragment key={displayName}>
+                    <a 
+                      href={`/literatures/authors/${slugify(displayName)}`} 
+                      class="text-brand-600 font-semibold hover:underline inline"
+                    >
+                      {displayName}
+                    </a>
+                    {index < resolvedAuthors.length - 1 && ", "}
+                  </Fragment>
+                ));
+              })()}
+            </p>
+
+            {/* Translation Credit Block */}
+            {currentChapter.data.translator && (
+              <p class="text-sm text-ink-muted italic">
+                <strong>Thông tin bản dịch:</strong> {currentChapter.data.translator}
+              </p>
+            )}
+          </header>
+          
+          {/* Core Body Text Render Window */}
+          <div class="prose prose-ink max-w-none mt-6 prose-headings:text-ink prose-a:text-brand-600 prose-headings:scroll-mt-20">
+            <Content />
+          </div>
+
+          {/* Categorization Tag Element Row */}
+          {currentChapter.data.tags && currentChapter.data.tags.length > 0 && (
+            <footer class="mt-12 pt-6 border-t border-border">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-semibold text-ink-muted uppercase tracking-wider">Tags:</span>
+                {currentChapter.data.tags.map((tag) => (
+                  <span key={tag} class="text-xs bg-slate-100 text-slate-700 px-2.5 py-1 rounded-full font-medium">
+                    #{tag}
+                  </span>
+                ))}
+              </div>
+            </footer>
+          )}
+        </article>
+
+        {/* Multi-chapter pagination footer navigation path panel */}
+        {hasChapters && (
+          <nav class="flex justify-between items-center pt-6 mt-12 border-t border-border">
+            {prevChapter ? (
+              <a 
+                href={`/literatures/${prevChapter.data.bookId}/${prevChapter.data.chapterNumber === 1 ? '' : prevChapter.data.chapterNumber}`} 
+                class="px-4 py-2 border border-border rounded text-sm font-medium text-ink hover:bg-gray-50 transition-colors"
+              >
+                ← Chương trước
+              </a>
+            ) : <div />}
+
+            {nextChapter && (
+              <a 
+                href={`/literatures/${nextChapter.data.bookId}/${nextChapter.data.chapterNumber}`} 
+                class="px-4 py-2 bg-brand-600 rounded text-sm font-medium text-white hover:bg-brand-700 transition-colors"
+              >
+                Chương sau →
+              </a>
+            )}
+          </nav>
+        )}
+      </div>
+
+      {/* Dynamic Navigation Sidebar */}
+      <aside class="hidden lg:block lg:col-span-1">
+        <div class="sticky top-24 max-h-[calc(100vh-8rem)] overflow-y-auto pb-4 border-l border-border pl-4">
+          {hasChapters ? (
+            /* Navigation Mode A: File Chapter Index Switcher Layout */
+            <div>
+              <h1 class="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-4">
+                Danh sách chương
+              </h1>
+              <nav class="space-y-2">
+                {allChapters.map((ch) => (
+                  <a 
+                    key={ch.id}
+                    href={`/literatures/${ch.data.bookId}/${ch.data.chapterNumber === 1 ? '' : ch.data.chapterNumber}`}
+                    class={`block text-sm p-2 rounded transition-colors ${
+                      ch.id === currentChapter.id 
+                        ? 'bg-brand-50 text-brand-600 font-bold' 
+                        : 'text-ink-muted hover:bg-gray-50'
+                    }`}
+                  >
+                    Chương {ch.data.chapterNumber}: {ch.data.chapterTitle || 'Không tiêu đề'}
+                  </a>
+                ))}
+
+              {/* Manually append the standard Markdown footnote anchor target */}
+                  <a 
+                    href="#footnote-label" 
+                    class="block text-sm transition-colors duration-150 text-ink-muted hover:text-brand-600 pl-2 font-medium border-t border-border/50 pt-2 mt-2"
+                  >
+                    CHÚ THÍCH
+                  </a>
+              </nav>
+            </div>
+          ) : (
+            /* Navigation Mode B: Native Document Content Heading Link Index */
+            headings.length > 0 && (
+              <div>
+                <h1 class="text-xs font-semibold text-ink-muted uppercase tracking-wider mb-4">
+                  Mục lục tác phẩm
+                </h1>
+                <nav class="space-y-2.5">
+                  {headings
+                    .filter((h) => h.depth <= 5)
+                    .map((heading) => (
+                      <a
+                        key={heading.slug}
+                        href={`#${heading.slug}`}
+                        class={`block text-sm transition-colors duration-150 text-ink-muted hover:text-brand-600 ${
+                          heading.depth === 2 ? "pl-2 font-medium text-ink" :
+                          heading.depth === 3 ? "pl-6 text-ink-muted" :
+                          heading.depth === 4 ? "pl-10 text-xs text-ink-muted/80" :
+                          heading.depth === 5 ? "pl-14 text-xs text-ink-muted/60 italic" : ""
+                        }`}
+                      >
+                        {heading.text}
+                      </a>
+                    ))}
+                </nav>
+              </div>
+            )
+          )}
+        </div>
+      </aside>
+
+    </div>
+  </main>
+</Layout>

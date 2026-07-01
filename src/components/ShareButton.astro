@@ -1,0 +1,82 @@
+---
+export interface Props {
+  slug: string;
+  variant?: 'icon' | 'button';
+}
+
+const { slug, variant = 'button' } = Astro.props;
+---
+
+<button
+  type="button"
+  data-share
+  data-slug={slug}
+  class:list={[
+    "inline-flex items-center gap-1.5 rounded-lg transition-colors focus:outline-none focus:ring-2 focus:ring-brand-400",
+    variant === 'button'
+      ? "px-3 py-1.5 text-sm font-medium text-brand-700 bg-brand-50 hover:bg-brand-100"
+      : "p-2 text-brand-600 hover:bg-brand-50"
+  ]}
+  aria-label="Sao chép liên kết"
+>
+  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"/>
+    <path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"/>
+  </svg>
+  {variant === 'button' && <span>Chia sẻ</span>}
+</button>
+
+<script>
+  document.addEventListener('click', (e) => {
+    const btn = (e.target as HTMLElement).closest('[data-share]');
+    if (!btn) return;
+
+    const slug = btn.getAttribute('data-slug');
+    if (!slug) return;
+    const url = `${window.location.origin}/item/${slug}`;
+
+    navigator.clipboard.writeText(url).then(() => {
+      // Fire-and-forget: record the share on the server. Failures are non-fatal —
+      // the user's clipboard copy still succeeded.
+      fetch('/api/share', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ slug }),
+        keepalive: true,
+      }).catch(() => {});
+
+      // Show toast
+      showToast('Đã sao chép liên kết!');
+    }).catch(() => {
+      showToast('Sao chép thất bại. Vui lòng thử lại.');
+    });
+  });
+
+  function showToast(message: string) {
+    // Remove existing toast
+    const existing = document.getElementById('share-toast');
+    if (existing) existing.remove();
+
+    const toast = document.createElement('div');
+    toast.id = 'share-toast';
+    toast.className = 'fixed bottom-6 left-1/2 -translate-x-1/2 z-50 px-4 py-2 bg-ink text-white text-sm font-medium rounded-lg shadow-lg animate-fade-in-up';
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+      toast.style.opacity = '0';
+      toast.style.transition = 'opacity 0.3s ease';
+      setTimeout(() => toast.remove(), 300);
+    }, 2000);
+  }
+</script>
+
+<style>
+  @keyframes fade-in-up {
+    from { opacity: 0; transform: translate(-50%, 12px); }
+    to   { opacity: 1; transform: translate(-50%, 0); }
+  }
+  .animate-fade-in-up {
+    animation: fade-in-up 0.25s ease-out both;
+  }
+</style>

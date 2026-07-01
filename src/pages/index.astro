@@ -1,0 +1,23 @@
+---
+import Layout from '../layouts/Layout.astro';
+import SearchBox from '../components/SearchBox.astro';
+import StartHere from '../components/StartHere.astro';
+import Trending from '../components/Trending.astro';
+import Debate from '../components/Debate.astro';
+---
+
+<Layout>
+  <section class="relative pt-16 pb-12 md:pt-24 md:pb-16 overflow-hidden">
+    <div class="absolute inset-0 bg-gradient-to-br from-brand-50 via-white to-orange-50 opacity-80 pointer-events-none"></div>
+    <div class="relative max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 text-center">
+      <h1 class="text-3xl sm:text-4xl md:text-5xl font-extrabold text-ink tracking-tight mb-4">
+        Hiểu đúng. Thấu hiểu. <span class="text-brand-600">Sẻ chia.</span>
+      </h1>
+ 
+      <SearchBox />
+    </div>
+  </section>
+
+  <StartHere />
+  <Debate />
+</Layout>
